@@ -1,0 +1,32 @@
+version: '3'
+
+volumes:
+  postgres:
+  redis:
+
+services:
+  postgres:
+    image: postgres:11.6
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    network_mode: host
+
+  redis:
+    image: redis:5.0.4-alpine
+    ports:
+      - 6379:6379
+    network_mode: host
+  
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - 1025:1025
+      - 8025:8025
+    network_mode: host
+    environment:
+      MH_HOSTNAME: mailhog.example
