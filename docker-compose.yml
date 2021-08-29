@@ -3,6 +3,7 @@ version: '3'
 volumes:
   postgres:
   redis:
+  meilisearch:
 
 services:
   postgres:
@@ -23,3 +24,10 @@ services:
     network_mode: host
     environment:
       MH_HOSTNAME: mailhog.example
+
+  meilisearch:
+    image: getmeili/meilisearch:v0.20.0
+    command: ./meilisearch --no-analytics=true
+    network_mode: host
+    volumes:
+      - meilisearch:/data.ms
