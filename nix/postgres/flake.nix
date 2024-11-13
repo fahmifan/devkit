@@ -18,6 +18,7 @@
       postgresql = pkgs.postgresql_16;
       pgPort = "5432";
       pgHome="$HOME/pgsql";
+      pgRunDir = "$HOME/pgsql/run";
       pgDataDir = "$HOME/pgsql/data";
       systemdUserDir = "$HOME/.config/systemd/user";
 
@@ -32,8 +33,6 @@
           Type=simple
           # Debug: print environment and directory information
           ExecStartPre=${pkgs.coreutils}/bin/pwd
-          ExecStartPre=${pkgs.coreutils}/bin/ls -la %h/pgsql/
-          ExecStartPre=${pkgs.coreutils}/bin/ls -la %h/pgsql/data/
           ExecStartPre=${pkgs.bash}/bin/bash -c 'echo "PATH=$PATH"'
           # Use absolute paths for everything
           ExecStart=${postgresql}/bin/postgres \
@@ -93,6 +92,11 @@
             chmod 0700 "${pgDataDir}"
           fi
 
+          if [ ! -d "${pgRunDir}" ]; then
+            mkdir -p "${pgRunDir}"
+            chmod 0700 "${pgRunDir}"
+          fi
+
           # Create systemd user directory if it doesn't exist
           if [ ! -d "${systemdUserDir}" ]; then
             mkdir -p "${systemdUserDir}"
@@ -103,9 +107,9 @@
           if [ ! -f "${pgDataDir}/PG_VERSION" ]; then
           ${postgresql}/bin/initdb -D "${pgDataDir}" \
             --auth=trust \
-            --username=$PG_USER \
+            --username=postgres \
             --locale=C.UTF-8
-              
+
           # Configure postgresql.conf
           cat > "${pgDataDir}/postgresql.conf" << EOF
           listen_addresses = '*'
@@ -113,6 +117,7 @@
           max_connections = 100
           shared_buffers = 128MB
           dynamic_shared_memory_type = posix
+          password_encryption = scram-sha-256
           EOF
           
           # Configure pg_hba.conf for password authentication
@@ -143,10 +148,6 @@
                 -c config_file=$HOME/pgsql/data/postgresql.conf \
                 -c hba_file=$HOME/pgsql/data/pg_hba.conf"
           
-          # Debug: check if postgres is running
-          echo "Checking PostgreSQL process..."
-          ps aux | grep postgres
-
           echo "Waiting for PostgreSQL to be ready..."
           for i in {1..30}; do
             if ${postgresql}/bin/pg_isready -h $HOME/pgsql/run -p 5432; then
@@ -154,8 +155,6 @@
               break
             fi
             echo "Attempt $i: Waiting for PostgreSQL..."
-            echo "Checking socket file..."
-            ls -la $HOME/pgsql/run/
             sleep 1
           done
 
